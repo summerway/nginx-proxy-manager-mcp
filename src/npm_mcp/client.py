@@ -1,7 +1,6 @@
 """Async HTTP client for Nginx Proxy Manager API."""
 
 import logging
-import os
 from datetime import UTC, datetime, timedelta
 
 import httpx
@@ -369,6 +368,8 @@ class NpmClient:
         email: str,
         provider: str = "letsencrypt",
         dns_challenge: bool = False,
+        dns_provider: str | None = None,
+        dns_provider_credentials: str | None = None,
     ) -> Certificate:
         """Create/provision a new SSL certificate.
 
@@ -378,6 +379,9 @@ class NpmClient:
                    Kept for backward compatibility with the MCP tool interface.
             provider: Certificate provider (default: "letsencrypt")
             dns_challenge: Use DNS challenge instead of HTTP (default: False)
+            dns_provider: DNS provider name (e.g. "cloudflare"). Overrides env var.
+            dns_provider_credentials: Credentials string for certbot DNS plugin.
+                    Overrides env var.
 
         Returns:
             Created Certificate object
@@ -389,27 +393,14 @@ class NpmClient:
         meta: dict = {}
         if dns_challenge:
             meta["dns_challenge"] = True
-            dns_provider = os.environ.get("DNS_PROVIDER", "cloudflare")
-            meta["dns_provider"] = dns_provider
-            dns_creds = os.environ.get("DNS_PROVIDER_CREDENTIALS", "")
-            if not dns_creds:
-                # Fallback: build credentials from provider-specific env vars
-                if dns_provider == "cloudflare":
-                    dns_token = os.environ.get("DNS_CLOUDFLARE_API_TOKEN", "")
-                    if dns_token:
-                        dns_creds = f"dns_cloudflare_api_token={dns_token}\n"
-                elif dns_provider == "route53":
-                    # AWS Route53 uses IAM roles or access keys
-                    aws_access_key = os.environ.get("AWS_ACCESS_KEY_ID", "")
-                    aws_secret_key = os.environ.get("AWS_SECRET_ACCESS_KEY", "")
-                    if aws_access_key and aws_secret_key:
-                        dns_creds = (
-                            f"aws_access_key_id={aws_access_key}\n"
-                            f"aws_secret_access_key={aws_secret_key}\n"
-                        )
-                # Add more providers as needed
-            if dns_creds:
-                meta["dns_provider_credentials"] = dns_creds
+            # Resolve DNS provider: tool param > env var (NPM_DNS_PROVIDER)
+            resolved_provider = dns_provider or settings.dns_provider
+            if resolved_provider:
+                meta["dns_provider"] = resolved_provider
+            # Resolve credentials: tool param > env var (NPM_DNS_PROVIDER_CREDENTIALS)
+            resolved_creds = dns_provider_credentials or settings.dns_provider_credentials
+            if resolved_creds:
+                meta["dns_provider_credentials"] = resolved_creds
         payload = {
             "domain_names": domain_names,
             "nice_name": domain_names[0] if domain_names else "certificate",

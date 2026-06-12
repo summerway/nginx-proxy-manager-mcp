@@ -45,6 +45,12 @@ class Settings(BaseSettings):
     # Path to NPM log directory (mount NPM's /data/logs here)
     log_dir: str = ""
 
+    # DNS challenge defaults (used by create_certificate)
+    # Provider name (e.g. "cloudflare", "route53", "digitalocean")
+    dns_provider: str = ""
+    # Credentials string for certbot DNS plugin (provider-specific format)
+    dns_provider_credentials: str = ""
+
     # Proxy host creation defaults (JSON string)
     # Example: '{"certificate_id": 24, "ssl_forced": true}'
     proxy_defaults: dict[str, Any] = {}

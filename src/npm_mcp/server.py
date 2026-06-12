@@ -528,13 +528,21 @@ async def create_certificate(
     domain_names: list[str],
     email: str,
     dns_challenge: bool = False,
+    dns_provider: str | None = None,
+    dns_provider_credentials: str | None = None,
 ) -> str:
     """Provision a new Let's Encrypt SSL certificate.
 
     Args:
         domain_names: List of domain names for the certificate
-        email: Email address for Let's Encrypt notifications
+        email: Ignored in NPM 2.14+ (email is configured in NPM settings).
+               Kept for backward compatibility.
         dns_challenge: Use DNS challenge instead of HTTP (default: False)
+        dns_provider: DNS provider for challenge (e.g. "cloudflare", "route53").
+                      Falls back to NPM_DNS_PROVIDER env var.
+        dns_provider_credentials: Credentials string for certbot DNS plugin
+            (provider-specific format, e.g. "dns_cloudflare_api_token=TOKEN\\n").
+            Falls back to NPM_DNS_PROVIDER_CREDENTIALS env var.
 
     Returns:
         Details of the created certificate including its ID.
@@ -546,6 +554,8 @@ async def create_certificate(
             domain_names=domain_names,
             email=email,
             dns_challenge=dns_challenge,
+            dns_provider=dns_provider,
+            dns_provider_credentials=dns_provider_credentials,
         )
 
         domains = ", ".join(cert.domain_names)

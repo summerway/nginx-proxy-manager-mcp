@@ -539,10 +539,10 @@ async def create_certificate(
                Kept for backward compatibility.
         dns_challenge: Use DNS challenge instead of HTTP (default: False)
         dns_provider: DNS provider for challenge (e.g. "cloudflare", "route53").
-                      Falls back to NPM_DNS_PROVIDER env var.
+                      Falls back to dns_provider in NPM_CERTIFICATE_DEFAULTS env var.
         dns_provider_credentials: Credentials string for certbot DNS plugin
             (provider-specific format, e.g. "dns_cloudflare_api_token=TOKEN\\n").
-            Falls back to NPM_DNS_PROVIDER_CREDENTIALS env var.
+            Falls back to dns_provider_credentials in NPM_CERTIFICATE_DEFAULTS env var.
 
     Returns:
         Details of the created certificate including its ID.

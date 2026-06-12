@@ -45,19 +45,18 @@ class Settings(BaseSettings):
     # Path to NPM log directory (mount NPM's /data/logs here)
     log_dir: str = ""
 
-    # DNS challenge defaults (used by create_certificate)
-    # Provider name (e.g. "cloudflare", "route53", "digitalocean")
-    dns_provider: str = ""
-    # Credentials string for certbot DNS plugin (provider-specific format)
-    dns_provider_credentials: str = ""
-
     # Proxy host creation defaults (JSON string)
     # Example: '{"certificate_id": 24, "ssl_forced": true}'
     proxy_defaults: dict[str, Any] = {}
 
-    @field_validator("proxy_defaults", mode="before")
+    # Certificate creation defaults (JSON string)
+    # Used by create_certificate when dns_challenge=True
+    # Example: '{"dns_provider":"cloudflare","dns_provider_credentials":"dns_cloudflare_api_token=TOKEN\n"}'
+    certificate_defaults: dict[str, Any] = {}
+
+    @field_validator("proxy_defaults", "certificate_defaults", mode="before")
     @classmethod
-    def parse_proxy_defaults(cls, v: Any) -> dict[str, Any]:
+    def parse_json_defaults(cls, v: Any) -> dict[str, Any]:
         """Parse JSON string to dict, or pass through if already dict."""
         if isinstance(v, dict):
             return v
@@ -67,7 +66,7 @@ class Settings(BaseSettings):
             try:
                 return json.loads(v)
             except json.JSONDecodeError as e:
-                raise ValueError(f"Invalid JSON in NPM_PROXY_DEFAULTS: {e}") from e
+                raise ValueError(f"Invalid JSON: {e}") from e
         return {}
 
     def get_proxy_defaults(self) -> dict[str, Any]:
@@ -75,6 +74,10 @@ class Settings(BaseSettings):
         merged = DEFAULT_PROXY_SETTINGS.copy()
         merged.update(self.proxy_defaults)
         return merged
+
+    def get_certificate_defaults(self) -> dict[str, Any]:
+        """Get certificate defaults from config."""
+        return self.certificate_defaults
 
 
 settings = Settings()

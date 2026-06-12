@@ -379,12 +379,14 @@ class NpmClient:
                    Kept for backward compatibility with the MCP tool interface.
             provider: Certificate provider (default: "letsencrypt")
             dns_challenge: Use DNS challenge instead of HTTP (default: False)
-            dns_provider: DNS provider name (e.g. "cloudflare"). Overrides env var.
+            dns_provider: DNS provider name (e.g. "cloudflare"). Overrides config.
             dns_provider_credentials: Credentials string for certbot DNS plugin.
-                    Overrides env var.
+                    Overrides config.
 
         Returns:
             Created Certificate object
+
+        DNS provider resolution order: tool param > NPM_CERTIFICATE_DEFAULTS env var.
         """
         # Build meta according to NPM 2.14+ API schema
         # NPM 2.14 uses additionalProperties: false on meta, only these fields are allowed:
@@ -393,14 +395,16 @@ class NpmClient:
         meta: dict = {}
         if dns_challenge:
             meta["dns_challenge"] = True
-            # Resolve DNS provider: tool param > env var (NPM_DNS_PROVIDER)
-            resolved_provider = dns_provider or settings.dns_provider
-            if resolved_provider:
-                meta["dns_provider"] = resolved_provider
-            # Resolve credentials: tool param > env var (NPM_DNS_PROVIDER_CREDENTIALS)
-            resolved_creds = dns_provider_credentials or settings.dns_provider_credentials
-            if resolved_creds:
-                meta["dns_provider_credentials"] = resolved_creds
+            # Merge: config defaults < tool param overrides
+            cert_defaults = settings.get_certificate_defaults()
+            if dns_provider:
+                meta["dns_provider"] = dns_provider
+            elif "dns_provider" in cert_defaults:
+                meta["dns_provider"] = cert_defaults["dns_provider"]
+            if dns_provider_credentials:
+                meta["dns_provider_credentials"] = dns_provider_credentials
+            elif "dns_provider_credentials" in cert_defaults:
+                meta["dns_provider_credentials"] = cert_defaults["dns_provider_credentials"]
         payload = {
             "domain_names": domain_names,
             "nice_name": domain_names[0] if domain_names else "certificate",
